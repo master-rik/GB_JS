@@ -1,20 +1,42 @@
-/* 1. Задать температуру в градусах по Цельсию. Вывести в alert соответствующую температуру в градусах по Фаренгейту. Подсказка: расчёт идёт по формуле: Tf = (9 / 5) * Tc + 32, где Tf – температура по Фаренгейту, Tc – температура по Цельсию */
+/* 1. Доработать модуль корзины.
+a. Добавлять в объект корзины выбранные товары по клику на кнопке «Купить» без перезагрузки страницы
+b. Привязать к событию покупки товара пересчет корзины и обновление ее внешнего вида
+ */
 "use strict"
 
-let tc = prompt("Введите температуру в градусах по Цельсию");
-let tf = (9 / 5) * tc + 32;
-console.log(tc, tf);
+for (let i = 0; i < (productList.length); i++) {
 
-/* 3. Объявить две переменные: admin и name. Записать в name строку "Василий"; Скопировать значение из name в admin. Вывести admin (должно вывести «Василий»). */
+	let product = document.createElement('div');
+	product.className = 'product';
+	product.innerHTML = '<div class="name">' + productList[i].name + '</div><div class="discription">' + productList[i].discription + '</div><div class="price">Цена: ' + productList[i].price + ' руб.</div><div class="buyButton" id ="' + i + '">КУПИТЬ</div>';
 
-let name = 'Vasya';
-let admin = name;
-console.log(admin);
+	let products = document.getElementById('products');
+	products.appendChild(product);
 
-/* Чему будет равно JS-выражение 1000 + "108"  
-ответ: в любом сложении с типом даных "строка(str)" , будет всегда производиться конкатенация  операндов*/
+}
+
+//функция помещения товара в корзину
+function putToBasket(x) {
+
+	let buy = document.createElement('div');
+	buy.className = 'buy';
+	buy.innerHTML = '' + productList[x.target.id].name + ' - ' + productList[x.target.id].price + ' руб.';
+
+	let basket = document.getElementById('basket');
+	basket.insertBefore(buy, basket.children[basket.children.length - 1]);
+
+	let sum = +document.getElementById('sum').innerHTML;
+	let currentSum = productList[x.target.id].price + sum;
+	document.getElementById('sum').innerHTML = currentSum;
+}
 
 
-console.log(1000 + '108');
-/* Самостоятельно разобраться с атрибутами тега script (async и defer)
-ответ: как я понял главное отличие async от defer заключается в том, что async загружает скрипты независимо друго от друга и HTML файла, а defer загружает скрипты в последовательнояти (скрипт1, скрипт2 ... скриптN), но независимо от файла HTML*/
+
+//Помещение товара в корзину при нажатии кнопки КУПИТЬ
+// в переменную buyButton попадает коллекция элементов с классом buyButton (блоки КУПИТЬ)
+
+let buyButton = document.getElementsByClassName('buyButton');
+
+for (let j = 0; j < (buyButton.length); j++) {
+	buyButton[j].onclick = putToBasket;
+}
