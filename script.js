@@ -1,108 +1,337 @@
-/* 1. С помощью цикла while вывести все простые числа в промежутке от 0 до 100. */
+// Глобальные переменные:                            
+let FIELD_SIZE_X = 20;//строки
+let FIELD_SIZE_Y = 20;//столбцы
+let SNAKE_SPEED = 200; // Интервал между перемещениями змейки
+let BAR_TIME = 5000;
+let snake = []; // Сама змейка
+let direction = 'y+'; // Направление движения змейки
+let gameIsRunning = false; // Запущена ли игра
+let snake_timer; // Таймер змейки
+//let food_timer; // Таймер для еды
+let bar_cell = ''; // Ячейка с препятствием
+let bar_timer; // Таймер для препятствий
+let score = 0; // Результат
+let outScore = ''; // Строка с результатом
 
-/* // Вариант №1
-let i = 2;
-let prime;
 
-while (i < 100) {
-	let j = 1;
-	while (j < i) {
-		if (i % j !== 0 || j == 1) prime = i;
-		else { prime = 0; break; }
-		j++;
+/*let outScore = document.createElement('div');
+outScore.className = 'score';*/
+
+//console.log(document.getElementsByClassName('score')[0]);
+//outScore.innerHTML = 'Набрано очков: ' + score; //Изначальное количество очков
+
+function init() {
+	prepareGameField(); // Генерация поля
+	outScore = document.getElementsByClassName('score')[0]; // Находим блок для выведения счёта
+	console.log(outScore);
+	outScore.innerHTML = 'Набрано очков: ' + score; //Изначальное количество очков
+	let wrap = document.getElementsByClassName('wrap')[0];
+	// Подгоняем размер контейнера под игровое поле
+
+	/*
+	if (16 * (FIELD_SIZE_X + 1) < 380) {
+		wrap.style.width = '380px';
 	}
-	if (prime !== 0) console.log(prime);
-	i++;
+	else {
+		wrap.style.width = (16 * (FIELD_SIZE_X + 1)).toString() + 'px';
+	}
+	*/
+	wrap.style.width = '400px';
+	// События кнопок Старт и Новая игра
+	document.getElementById('snake-start').addEventListener('click', startGame);
+	document.getElementById('snake-renew').addEventListener('click', refreshGame);
+
+	// Отслеживание клавиш клавиатуры
+	addEventListener('keydown', changeDirection);
 }
+
+/**
+ * Функция генерации игрового поля
  */
+function prepareGameField() {
+	// Создаём таблицу
+	let game_table = document.createElement('table');
+	game_table.setAttribute('class', 'game-table');
 
-//вариант №2
+	// Генерация ячеек игровой таблицы
+	for (let i = 0; i < FIELD_SIZE_X; i++) {
+		// Создание строки
+		let row = document.createElement('tr');
+		row.className = 'game-table-row row-' + i;
 
-//создаем массив из чисел от 0 до 100
-/* let arr = [];
-let start = 100;
-while (start >= 0) {
-	arr.push(start--);
+		for (let j = 0; j < FIELD_SIZE_Y; j++) {
+			// Создание ячейки
+			let cell = document.createElement('td');
+			cell.className = 'game-table-cell cell-' + i + '-' + j;
+
+			row.appendChild(cell); // Добавление ячейки
+		}
+		game_table.appendChild(row); // Добавление строки
+	}
+
+	document.getElementById('snake-field').appendChild(game_table); // Добавление таблицы
 }
-arr = arr.reverse();
-console.log(arr); */
 
-//создаем массив через цикл for
-let arr = [];
-let res = [];
+/**
+ * Старт игры
+ */
+function startGame() {
+	outScore = document.getElementsByClassName('score')[0]; // Находим блок для выведения счёта
 
-for (let start = 100; start >= 0; arr.push(start--));
-arr = arr.reverse();
+	gameIsRunning = true;
+	respawn();//создали змейку
 
+	snake_timer = setInterval(move, SNAKE_SPEED);//каждые 200мс запускаем функцию move
+	bar_timer = setInterval(createBar, BAR_TIME);
+	setTimeout(createFood, 5000);
+}
 
-for (let i = 1; i < arr.length; ++i) {
-	let flag = 1;
-	if (i > 2 && i % 2 != 0) {
-		for (let j = 3; j * j <= i; j = j + 2) {
-			if (i % j == 0) {
-				flag = 0;
-				break;
-			}
+/**
+ * Функция расположения змейки на игровом поле
+ */
+function respawn() {
+	// Змейка - массив td
+	// Стартовая длина змейки = 2
+
+	// Respawn змейки из центра
+	let start_coord_x = Math.floor(FIELD_SIZE_X / 2);
+	let start_coord_y = Math.floor(FIELD_SIZE_Y / 2);
+
+	// Голова змейки
+	let snake_head = document.getElementsByClassName('cell-' + start_coord_y + '-' + start_coord_x)[0];
+	snake_head.setAttribute('class', snake_head.getAttribute('class') + ' snake-unit');
+	// Тело змейки
+	let snake_tail = document.getElementsByClassName('cell-' + (start_coord_y - 1) + '-' + start_coord_x)[0];
+	snake_tail.setAttribute('class', snake_tail.getAttribute('class') + ' snake-unit');
+
+	snake.push(snake_head);
+	snake.push(snake_tail);
+}
+
+/**
+ * Движение змейки
+ */
+function move() {
+	//console.log('move',direction);
+	// Сборка классов
+	let snake_head_classes = snake[snake.length - 1].getAttribute('class').split(' ');
+
+	// Сдвиг головы
+	let new_unit;
+	let snake_coords = snake_head_classes[1].split('-');//преобразовали строку в массив
+	let coord_y = parseInt(snake_coords[1]);
+	let coord_x = parseInt(snake_coords[2]);
+
+	// Определяем новую точку
+	if (direction == 'x-') {
+		new_unit = document.getElementsByClassName('cell-' + (coord_y) + '-' + (coord_x - 1))[0];
+		if (new_unit == undefined) {
+			new_unit = document.getElementsByClassName('cell-' + (coord_y) + '-' + (FIELD_SIZE_Y - 1))[0];
+			console.log(new_unit);
 		}
 	}
-	else if (i != 2)
-		flag = 0;
-	if (flag == 1) res.push(i)
-};
-
-//console.log(arr);// массив от 0 до 100
-console.log(res);// массив с простыми числами от 0 до 100
-
-
-/* 
-2. С этого урока начинаем работать с функционалом интернет-магазина. Предположим, есть сущность корзины. Нужно реализовать функционал подсчета стоимости корзины в зависимости от находящихся в ней товаров. Товары в корзине хранятся в массиве. Задачи:
-a) Организовать такой массив для хранения товаров в корзине;
-b) Организовать функцию countBasketPrice, которая будет считать стоимость корзины.
- */
-
-const arrProject = [
-	['gold', 100, 100],
-	['wood', 50, 200],
-	['stone', 30, 500],
-	['food', 70, 400]
-];
-
-/* function countBasketPrice(arr) {
-	let sum = 0;
-	for (let i = 0; i < arr.length; i++) {
-		sum = sum + arr[i][1] * arr[i][2];
+	else if (direction == 'x+') {
+		new_unit = document.getElementsByClassName('cell-' + (coord_y) + '-' + (coord_x + 1))[0];
+		if (new_unit == undefined) {
+			new_unit = document.getElementsByClassName('cell-' + (coord_y) + '-' + 0)[0];
+		}
 	}
-	return sum;
-};
+	else if (direction == 'y+') {
+		new_unit = document.getElementsByClassName('cell-' + (coord_y - 1) + '-' + (coord_x))[0];
+		if (new_unit == undefined) {
+			new_unit = document.getElementsByClassName('cell-' + (FIELD_SIZE_Y - 1) + '-' + (coord_x))[0];
+		}
+	}
+	else if (direction == 'y-') {
+		new_unit = document.getElementsByClassName('cell-' + (coord_y + 1) + '-' + (coord_x))[0];
+		if (new_unit == undefined) {
+			new_unit = document.getElementsByClassName('cell-' + 0 + '-' + (coord_x))[0];
+		}
+	}
 
-console.log(countBasketPrice(arrProject)); */
+	// Проверки
+	// 1) new_unit не часть змейки
+	// 2) Змейка не попала на препятствие
+	//console.log(new_unit);
+	if (!isSnakeUnit(new_unit) && !isBarCell(new_unit)) {
+		// Добавление новой части змейки
+		new_unit.setAttribute('class', new_unit.getAttribute('class') + ' snake-unit');
+		snake.push(new_unit);
 
-let basket = arrProject.reduce(function
-	(aсс, [t, p, c]) {
-	sum = p * c;
-	sum = aсс + sum
-	//	console.log('p' + p);
-	//	console.log('c' + c);
-	//	console.log('a' + a);
-	return sum;
-}, 0);
+		// Проверяем, надо ли убрать хвост
+		if (!haveFood(new_unit)) {
+			// Находим хвост
+			let removed = snake.splice(0, 1)[0];
+			let classes = removed.getAttribute('class').split(' ');
 
-console.log('Итого: ' + basket);
-
-
-/* 3.*Вывести с помощью цикла for числа от 0 до 9, не используя тело цикла. Выглядеть это должно так:
-for(…){// здесь пусто} */
-
-for (let n = 0; n < 10; console.log(n++));
-
-/* 
-4. *Нарисовать пирамиду с помощью console.log, как показано на рисунке, только у вашей пирамиды должно быть 20 рядов, а не 5:
- */
-const ROW = 20;
-let x = 'x'
-for (let i = 0; i < 20; i++) {
-	console.log(x);
-	x = x + 'x';
+			// удаляем хвост
+			removed.setAttribute('class', classes[0] + ' ' + classes[1]);
+		}
+	}
+	else {
+		finishTheGame();
+	}
 }
 
+/**
+ * Проверка на змейку
+ * @param unit
+ * @returns {boolean}
+ */
+function isSnakeUnit(unit) {
+	let check = false;
 
+	if (snake.includes(unit)) {
+		check = true;
+	}
+	return check;
+}
+
+/**
+ * Проверка на препятствие
+ * @param unit
+ * @returns {boolean}
+ */
+function isBarCell(unit) {
+	let check = false;
+	bar_cell = document.getElementsByClassName('bar-unit')[0];
+
+	// если препятствие
+	if (unit === bar_cell) {
+		check = true;
+	}
+	return check;
+}
+
+/**
+ * проверка на еду
+ * @param unit
+ * @returns {boolean}
+ */
+function haveFood(unit) {
+	let check = false;
+
+	let unit_classes = unit.getAttribute('class').split(' ');
+
+	// Если еда
+	if (unit_classes.includes('food-unit')) {
+		check = true;
+		createFood();
+
+		score++;
+		outScore.innerHTML = 'Набрано очков: ' + score; // Обновляем количество набранных очков
+	}
+	return check;
+}
+
+/**
+ * Создание еды
+ */
+function createFood() {
+	let foodCreated = false;
+
+	while (!foodCreated) { //пока еду не создали
+		// рандом
+		let food_x = Math.floor(Math.random() * FIELD_SIZE_X);
+		let food_y = Math.floor(Math.random() * FIELD_SIZE_Y);
+
+		let food_cell = document.getElementsByClassName('cell-' + food_y + '-' + food_x)[0];
+		let food_cell_classes = food_cell.getAttribute('class').split(' ');
+
+		// проверка на змейку и препятствия
+		if (!food_cell_classes.includes('snake-unit') && !food_cell_classes.includes('bar-unit')) {
+			let classes = '';
+			for (let i = 0; i < food_cell_classes.length; i++) {
+				classes += food_cell_classes[i] + ' ';
+			}
+
+			food_cell.setAttribute('class', classes + 'food-unit');
+			foodCreated = true;
+		}
+	}
+}
+
+/**
+ * Создание препятствий
+ */
+function createBar() {
+	let barCreated = false;
+	bar_cell = document.getElementsByClassName('bar-unit')[0];
+	if (bar_cell) {
+		let bar_cell_classes = bar_cell.getAttribute('class').split(' ');
+		let bar_cell_new_classes = '';
+		for (i = 0; i < bar_cell_classes.length; i++) {
+			bar_cell_new_classes = bar_cell.setAttribute('class', bar_cell_new_classes + bar_cell_classes[i] + ' ')
+		}
+
+	}
+
+	while (!barCreated) { //пока препятствие не создали
+		// рандом
+		let bar_x = Math.floor(Math.random() * FIELD_SIZE_X);
+		let bar_y = Math.floor(Math.random() * FIELD_SIZE_Y);
+
+		bar_cell = document.getElementsByClassName('cell-' + bar_y + '-' + bar_x)[0];
+		bar_cell_classes = bar_cell.getAttribute('class').split(' ');
+
+		// проверка на змейку и еду
+		if (!bar_cell_classes.includes('snake-unit') && !bar_cell_classes.includes('food-unit')) {
+			let classes = '';
+			for (let i = 0; i < bar_cell_classes.length; i++) {
+				classes += bar_cell_classes[i] + ' ';
+			}
+
+			bar_cell.setAttribute('class', classes + 'bar-unit');
+			barCreated = true;
+		}
+	}
+}
+
+/**
+ * Изменение направления движения змейки
+ * @param e - событие
+ */
+function changeDirection(e) {
+	console.log(e);
+	switch (e.keyCode) {
+		case 37: // Клавиша влево
+			if (direction != 'x+') {
+				direction = 'x-'
+			}
+			break;
+		case 38: // Клавиша вверх
+			if (direction != 'y-') {
+				direction = 'y+'
+			}
+			break;
+		case 39: // Клавиша вправо
+			if (direction != 'x-') {
+				direction = 'x+'
+			}
+			break;
+		case 40: // Клавиша вниз
+			if (direction != 'y+') {
+				direction = 'y-'
+			}
+			break;
+	}
+}
+
+/**
+ * Функция завершения игры
+ */
+function finishTheGame() {
+	gameIsRunning = false;
+	clearInterval(snake_timer);
+	alert('Вы проиграли! Ваш результат: ' + score.toString());
+}
+
+/**
+ * Новая игра
+ */
+function refreshGame() {
+	location.reload();
+}
+
+// Инициализация
+window.onload = init;
